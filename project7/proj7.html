@@ -1,0 +1,100 @@
+<!--
+To use the below program, click each of the four buttons to change the focus of the scene (the starting focus is "scene"). When the focus of the scene is Earth or Moon, you can use the left and right
+arrow keys to orbit the moon around the Earth. In the moon perspective, your camera will be placed on the surface of the Earth nearest the moon, and will follow the moon as it orbits around
+the Earth, realistically demonstrating the phases of the moon as they relate to its position between the Sun and the Earth. 
+-->
+<!DOCTYPE html>
+<html>
+<title>Casey Derringer - CS 535 - Project #7</title>
+<script id="vertex-shader" type="x-shader/x-vertex">
+#version 300 es
+
+in vec4 aPosition;
+in vec4 aNormal;
+in vec2 aTexCoord;
+
+out float s, t;
+out vec3 N, L, E;
+
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
+uniform vec4 uLightPosition;
+uniform mat3 uNormalMatrix;
+
+void main()
+{
+    vec3 pos = (uModelViewMatrix * aPosition).xyz;
+    
+    if(uLightPosition.w == 0.0) L = normalize(uLightPosition.xyz);
+    else L = normalize(uLightPosition.xyz - pos);
+
+    E = -normalize(pos);
+    N = normalize(uNormalMatrix * aNormal.xyz);
+
+    float pi = 3.14159265359;
+
+    vec3 localPos = normalize(aPosition.xyz);
+    
+    s = atan(localPos.x, localPos.z) / (2.0 * pi) + 0.5;
+    t = 1.0 - (asin(localPos.y) / pi + 0.5);
+
+    gl_Position = uProjectionMatrix * uModelViewMatrix * aPosition;
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+#version 300 es
+
+precision mediump float;
+
+uniform vec4 uAmbientProduct;
+uniform vec4 uDiffuseProduct;
+uniform vec4 uSpecularProduct;
+uniform float uShininess;
+
+in float s, t;
+in vec3 N, L, E;
+
+out vec4 fColor;
+
+uniform sampler2D uTextureMap;
+
+void main()
+{
+    vec3 H = normalize(L + E);
+    vec4 ambient = uAmbientProduct;
+
+    float Kd = max(dot(L, N), 0.0);
+    vec4 diffuse = Kd * uDiffuseProduct;
+
+    float Ks = pow(max(dot(N, H), 0.0), uShininess);
+    vec4 specular = Ks * uSpecularProduct;
+
+    if(dot(L, N) < 0.0) specular = vec4(0.0, 0.0, 0.0, 1.0);
+
+    fColor = (ambient + diffuse + specular) * texture(uTextureMap, vec2(s, t));
+    fColor.a = 1.0;
+}
+</script>
+
+<script type="text/javascript" src="../Common/initShaders.js"></script>
+<script type="text/javascript" src="../Common/MVnew.js"></script>
+<script type="text/javascript" src="proj7.js"></script>
+
+<body>
+
+    <canvas id="gl-canvas" width=1080 height=512>
+    Oops ... your browser doesn't support the HTML5 canvas element
+    </canvas>
+    
+    <button id="scene">Scene</button>
+    <button id="sunButton">Sun</button>
+    <button id="earthButton">Earth</button>
+    <button id="moonButton">Moon</button>
+
+    <img id="sun" src="sun.jpg" hidden></img>
+    <img id="earth" src="earth.jpg" hidden></img>
+    <img id="moon" src="moon.jpg" hidden></img>
+
+</body>
+</html>
